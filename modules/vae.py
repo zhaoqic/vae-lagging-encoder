@@ -301,3 +301,31 @@ class VAE(nn.Module):
         """
 
         return self.encoder.calc_mi(x)
+
+
+class SemisupervisedVAE(VAE):
+    def __init__(self, encoder, decoder, args):
+        super(SemisupervisedVAE, self).__init__(encoder, decoder, args)
+        self.ny = args.ny
+
+    def loss(self, x, y, kl_weight, lat_weight, nsamples=1):
+        """
+        Args:
+            x: data tensor for text with shape (batch, *).
+            y: data tensor for num with shape (batch, ny).
+
+        Returns: Tensor1, Tensor2, Tensor3
+            Tensor1: total loss [batch]
+            Tensor2: reconstruction loss shape [batch]
+            Tensor3: KL loss shape [batch]
+            Tensor4: latent_err [batch]
+        """
+
+        z, KL_z, mu = self.encoder.encode(x, nsamples, return_mu=True)
+
+        # (batch)
+        reconstruct_err = self.decoder.reconstruct_error(x, z).mean(dim=1)
+        loss_lat = (mu[:,:self.ny] - y).pow(2).sum(dim=1)
+
+        return reconstruct_err + kl_weight * KL_z + lat_weight * loss_lat, \
+            reconstruct_err, KL_z, loss_lat

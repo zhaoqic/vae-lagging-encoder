@@ -277,3 +277,91 @@ class MonoTextData(object):
         batch_data, sents_len = self._to_tensor(batch_data, batch_first, device)
 
         return batch_data, sents_len
+
+
+class SupervisedTextData(MonoTextData):
+    def __init__(self, fnum, fdoc, vocab=None):
+        self.docs, self.nums, self.vocab = self._read_numpy(fdoc, fnum, vocab)
+        self.ny = self.nums.shape[1]
+
+    def __len__(self):
+        return len(self.docs)
+
+
+    def _read_numpy(self, fdoc, fnum, vocab=None):
+        if not vocab:
+            vocab = defaultdict(lambda: len(vocab))
+            vocab['<pad>'] = 0
+            vocab['<s>'] = 1
+            vocab['</s>'] = 2
+            vocab['<unk>'] = 3
+
+        nums = np.load(fnum)
+        docs = np.load(fdoc).squeeze()
+        docs_encoded = np.array([[vocab[word] for word in doc.split() ] for doc in docs])
+
+        if not isinstance(vocab, VocabEntry):
+            vocab = VocabEntry(vocab)
+
+        return docs_encoded, nums, vocab
+
+
+    def create_data_batch(self, batch_size, device, batch_first=False):
+        """pad data with start and stop symbol, batching is performerd w.r.t.
+        the sentence length, so that each returned batch has the same length,
+        no further pack sequence function (e.g. pad_packed_sequence) is required
+        Returns: List
+            List: a list of batched data, each element is a tensor with shape
+                (seq_len, batch_size)
+        """
+        sents_len = np.array([len(sent) for sent in self.docs])
+        sort_idx = np.argsort(sents_len)
+        sort_len = sents_len[sort_idx]
+
+        # record the locations where length changes
+        change_loc = []
+        for i in range(1, len(sort_len)):
+            if sort_len[i] != sort_len[i-1]:
+                change_loc.append(i)
+        change_loc.append(len(sort_len))
+
+        batch_docs_list = []
+        batch_nums_list = []
+        total = 0
+        curr = 0
+        for idx in change_loc:
+            while curr < idx:
+                next_i = min(curr + batch_size, idx)
+                batch_idx = sort_idx[curr:next_i]
+                batch_docs = self.docs[batch_idx]
+                batch_nums = self.nums[batch_idx]
+                curr = next_i
+
+                batch_docs, sents_len = self._to_tensor(batch_docs, batch_first, device)
+                batch_nums = torch.tensor(batch_nums, dtype=torch.float, requires_grad=False, device=device)
+
+                batch_docs_list.append(batch_docs)
+                batch_nums_list.append(batch_nums)
+
+                total += batch_docs.size(0)
+                assert(sents_len == ([sents_len[0]] * len(sents_len)))
+
+        assert(total == len(self.nums))
+        return batch_docs_list, batch_nums_list
+
+    def create_data_batch_labels(self, batch_size, device, batch_first=False):
+        return self.create_data_batch(batch_size, device, batch_first)
+
+
+if __name__ == "__main__":
+    class Args:
+        train_num = './datasets/g06n_data/g06n.num.valid.npy'
+        train_doc = './datasets/g06n_data/g06n.doc.valid.npy'
+        batch_size = 128
+        device = 'cpu'
+        batch_first = True
+
+    args = Args()
+    train_data = SupervisedTextData(fnum=args.train_num, fdoc=args.train_doc)
+    batch_docs_list, batch_nums_list = train_data.create_data_batch(args.batch_size, args.device, args.batch_first)
+    
