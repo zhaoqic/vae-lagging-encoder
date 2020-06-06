@@ -461,7 +461,7 @@ def main(args):
 
         svae.eval()
         with torch.no_grad():
-            loss, nll, kl, ppl, mi = test(svae, val_docs_batch, val_nums_batch, "VAL", args)
+            loss, nll, kl, latl, ppl, mi = test(svae, val_docs_batch, val_nums_batch, "VAL", args)
             au, au_var = calc_au(svae, val_docs_batch)
             print("%d active units" % au)
             # print(au_var)

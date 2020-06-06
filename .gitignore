@@ -1,2 +1,8 @@
 datasets/*
+logs/*
+models/*
+samples/*
+
 *.pyc
+*.sh
+.*
