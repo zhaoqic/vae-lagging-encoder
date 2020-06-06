@@ -9,7 +9,7 @@ params={
     'dec_nh': 1024,
     'dec_dropout_in': 0.5,
     'dec_dropout_out': 0.5,
-    'batch_size': 32,
+    'batch_size': 64,
     'epochs': 100,
     'test_nepoch': 5,
     'train_num': 'datasets/g06n_data/g06n.num.train.npy',

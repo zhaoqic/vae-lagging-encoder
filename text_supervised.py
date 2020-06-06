@@ -56,14 +56,13 @@ def init_config(argstr=None):
     parser.add_argument('--jobid', type=int, default=0, help='slurm job id')
     parser.add_argument('--taskid', type=int, default=0, help='slurm task id')
 
-    parser.add_argument('--no_cuda', action='store_true', default=False, help='disable cuda')
-
+    parser.add_argument('--cudaid', type=int, default=0, help='default cuda device, -1 if no cuda')
     if argstr:
         args = parser.parse_args(argstr.split())
     else:
         args = parser.parse_args()
 
-    args.cuda = False if args.no_cuda else torch.cuda.is_available()
+    args.cuda = False if args.cudaid < 0 else torch.cuda.is_available()
 
     save_dir = "models/%s" % args.dataset
     log_dir = "logs/%s" % args.dataset
@@ -77,6 +76,7 @@ def init_config(argstr=None):
     seed_set = [783435, 101, 202, 303, 404, 505, 606, 707, 808, 909]
     args.seed = seed_set[args.taskid]
 
+    print('task id:', args.taskid)
     id_ = "%s_aggressive%d_kls%.2f_warm%d_%d_%d_%d" % \
         (args.dataset, args.aggressive, args.kl_start,
          args.warm_up, args.jobid, args.taskid, args.seed)
@@ -270,12 +270,12 @@ def main(args):
     print('finish reading datasets, vocab size is %d' % len(vocab))
     sys.stdout.flush()
 
-    log_niter = 1#(len(train_data)//args.batch_size)//10
+    log_niter = (len(train_data)//args.batch_size)//10
 
     model_init = uniform_initializer(0.01)
     emb_init = uniform_initializer(0.1)
 
-    device = torch.device("cuda" if args.cuda else "cpu")
+    device = torch.device(f"cuda:{args.cudaid}" if args.cuda else "cpu")
     args.device = device
 
     if args.enc_type == 'lstm':
@@ -461,7 +461,7 @@ def main(args):
 
         svae.eval()
         with torch.no_grad():
-            loss, nll, kl, ppl, mi = test(svae, val_docs_batch, val_nums_batch, "VAL", args)
+            loss, nll, kl, latl, ppl, mi = test(svae, val_docs_batch, val_nums_batch, "VAL", args)
             au, au_var = calc_au(svae, val_docs_batch)
             print("%d active units" % au)
             # print(au_var)
@@ -517,5 +517,6 @@ def main(args):
 
 
 if __name__ == '__main__':
-    args = init_config('--dataset g06n --aggressive 1 --warm_up 10 --kl_start 0.1 --taskid 1')
+    #args = init_config('--dataset g06n --aggressive 1 --warm_up 10 --kl_start 0.1 --taskid 1')
+    args = init_config()
     main(args)
