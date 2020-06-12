@@ -17,5 +17,8 @@ params={
     'test_num': 'datasets/g06n_data/g06n.num.test.npy',
     'train_doc': 'datasets/g06n_data/g06n.doc.train.npy',
     'val_doc': 'datasets/g06n_data/g06n.doc.valid.npy',
-    'test_doc': 'datasets/g06n_data/g06n.doc.test.npy'
+    'test_doc': 'datasets/g06n_data/g06n.doc.test.npy',
+    'train_label': 'datasets/g06n_data/g06n.label.train.npy',
+    'val_label': 'datasets/g06n_data/g06n.label.valid.npy',
+    'test_label': 'datasets/g06n_data/g06n.label.test.npy'
 }

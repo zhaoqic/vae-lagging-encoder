@@ -280,15 +280,25 @@ class MonoTextData(object):
 
 
 class SupervisedTextData(MonoTextData):
-    def __init__(self, fnum, fdoc, vocab=None):
-        self.docs, self.nums, self.vocab = self._read_numpy(fdoc, fnum, vocab)
+    def __init__(self, fnum, fdoc, vocab=None, flabel=None):
+        self.docs, self.nums, self.vocab, self.labels = self._read_numpy(fdoc, fnum, vocab, flabel)
         self.ny = self.nums.shape[1]
 
     def __len__(self):
         return len(self.docs)
 
+    def __getitem__(self, sliced):
+        if isinstance(sliced, set):
+            print('>> Slicing data by labels')
+            sliced = [l in sliced for l in self.labels]
+        else:
+            print('>> Slicing data by index')
+        if self.labels is None:
+            return self.docs[sliced], self.nums[sliced], None, sliced
+        else: 
+            return self.docs[sliced], self.nums[sliced], self.labels[sliced], sliced
 
-    def _read_numpy(self, fdoc, fnum, vocab=None):
+    def _read_numpy(self, fdoc, fnum, vocab, flabel):
         if not vocab:
             vocab = defaultdict(lambda: len(vocab))
             vocab['<pad>'] = 0
@@ -303,7 +313,8 @@ class SupervisedTextData(MonoTextData):
         if not isinstance(vocab, VocabEntry):
             vocab = VocabEntry(vocab)
 
-        return docs_encoded, nums, vocab
+        labels = np.load(flabel) if flabel else None
+        return docs_encoded, nums, vocab, labels
 
 
     def create_data_batch(self, batch_size, device, batch_first=False):
@@ -352,6 +363,28 @@ class SupervisedTextData(MonoTextData):
     def create_data_batch_labels(self, batch_size, device, batch_first=False):
         return self.create_data_batch(batch_size, device, batch_first)
 
+
+    def data_iter(self, batch_size, device, batch_first=False, shuffle=True):
+        """pad data with start and stop symbol, and pad to the same length
+        Returns:
+            batch_data: LongTensor with shape (seq_len, batch_size)
+            sents_len: list of data length, this is the data length
+                       after counting start and stop symbols
+        """
+        index_arr = np.arange(len(self.docs))
+
+        if shuffle:
+            np.random.shuffle(index_arr)
+
+        batch_num = int(np.ceil(len(index_arr)) / float(batch_size))
+        for i in range(batch_num):
+            batch_ids = index_arr[i * batch_size : (i+1) * batch_size]
+            batch_docs = self.docs[batch_ids] 
+            batch_nums = self.nums[batch_ids]
+
+            # uncomment this line if the dataset has variable length
+            batch_docs, sents_len = self._to_tensor(batch_docs, batch_first, device)
+            yield batch_docs, batch_nums, sents_len
 
 if __name__ == "__main__":
     class Args:
