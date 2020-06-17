@@ -37,7 +37,7 @@ class GaussianEncoderBase(nn.Module):
 
         return z, (mu, logvar)
 
-    def encode(self, input, nsamples, return_mu=False):
+    def encode(self, input, nsamples, return_mu=False, return_var=False):
         """perform the encoding and compute the KL term
 
         Returns: Tensor1, Tensor2
@@ -54,7 +54,9 @@ class GaussianEncoderBase(nn.Module):
 
         KL = 0.5 * (mu.pow(2) + logvar.exp() - logvar - 1).sum(dim=1)
 
-        if return_mu:
+        if return_var:
+            return z, KL, mu, logvar.exp()
+        elif return_mu:
             return z, KL, mu
         else:
             return z, KL

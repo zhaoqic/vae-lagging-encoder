@@ -73,9 +73,6 @@ def init_config(argstr=None):
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
 
-    seed_set = [783435, 101, 202, 303, 404, 505, 606, 707, 808, 909]
-    args.seed = seed_set[args.taskid]
-
     print('task id:', args.taskid)
     id_ = "%s_aggressive%d_kls%.2f_warm%d_%d_%d_%d" % \
         (args.dataset, args.aggressive, args.kl_start,

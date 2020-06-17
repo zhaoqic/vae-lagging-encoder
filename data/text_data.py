@@ -363,6 +363,8 @@ class SupervisedTextData(MonoTextData):
     def create_data_batch_labels(self, batch_size, device, batch_first=False):
         return self.create_data_batch(batch_size, device, batch_first)
 
+    def to_tensor(self, batch_docs, batch_first, device):
+        return self._to_tensor(batch_docs, batch_first, device)
 
     def data_iter(self, batch_size, device, batch_first=False, shuffle=True):
         """pad data with start and stop symbol, and pad to the same length
